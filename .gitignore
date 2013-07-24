@@ -1,0 +1,17 @@
+.project
+.nfs*
+*~
+.sw*
+.*.sw*
+.DS_Store
+core
+core.*
+*.egg_info
+*.pyc
+*.pyo
+__pycache__
+/.idea
+/build
+/dist
+/*.egg-info
+/MANIFEST
