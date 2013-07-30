@@ -170,7 +170,6 @@ def exportVM(serverIp, user, passwd, vmName, workingDir):
                 print 'There is not enough free disk space to download all extends for VM:' + vmName
                 exit(4)
             for e in extends.keys():
-                # add size check
                 m = re.match('^(.+?)/folder/(.+?)/(.+?)\?(.+)$', VmdkUri)
                 uri = m.group(1) + '/folder/' + m.group(2) + '/' + urllib2.quote(e) + '?' + m.group(4)
                 downloadFile(uri, user, passwd, directory + e)
