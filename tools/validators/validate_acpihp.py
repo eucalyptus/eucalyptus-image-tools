@@ -2,4 +2,4 @@
 
 from image_validation import acpiphp
 
-acpiphp.validator(trace=True, fuse=True)
+acpiphp.validator(trace=True)
