@@ -1,19 +1,25 @@
+import atexit
 import sys
 import getopt
 import guestfs
 import threading
 
 def _usage():
+    """Print validator usage and then exit."""
     print '\nUsage:'
     print '%s [-a image] [--check-dependencies] mountpoint\n' % sys.argv[0]
     sys.exit(0)                         # By spec, exit 0 unless bad validation.
-    
+
 def _mount_local_run(guest):
+    """Called in thread to process activity on fuse-mounted filesystem.
+    Blocks until filesystem is unmounted.
+    """
     print "calling guestfs.mount_local_run()"
     guest.mount_local_run()
     print "guestfs.mount_local_run() returned"
-    
-def _mountFUSE(image, mountpoint, trace=False):
+
+def _lightFUSE(image, trace=False):
+    """Initiaizes guestfs for an image."""
     guest = guestfs.GuestFS()
 
     if trace:
@@ -35,6 +41,13 @@ def _mountFUSE(image, mountpoint, trace=False):
             except RuntimeError as msg:
                 print "%s (ignored)" % msg
 
+    return guest
+
+def _mountFUSE(guest, mountpoint):
+    """Mounts FUSE filesystem at specified mountpoint.
+
+    GuestFS must already have been initialized.
+    """
     # FIXME: Create this mount point if it doesn't already exist.
     guest.mount_local (mountpoint)
 
@@ -43,15 +56,12 @@ def _mountFUSE(image, mountpoint, trace=False):
     runThread.daemon = True
     runThread.start()
 
-    import epdb ; epdb.set_trace()
-
-    return guest
-    
-def _mountRaw(image):
-    pass
-
 class ImageAccess():
+
+    """Class for accessing images, either directly via FUSE or using a previous (external) mount to the filesystem."""
+
     def __init__(self, trace=False):
+        """Handles command-line aruguments and sets up image access.>"""
         self.image = None
         self._trace = trace
         
@@ -74,11 +84,17 @@ class ImageAccess():
 
         if self.image:
             self.mountpoint = arglist[0]
-            import epdb ; epdb.set_trace()
-            self.guest = _mountFUSE(self.image, self.mountpoint,
-                                    trace=self._trace)
+            self.guest = _lightFUSE(self.image, trace=self._trace)
+            _mountFUSE(self.guest, self.mountpoint)
         else:
             print '\n%s: Usage without images not yet supported.\n' % sys.argv[0]
             sys.exit(0)
 
-        import epdb ; epdb.set_trace()
+    def __del__(self):
+        """Ensures FUSE filesystem is unmounted before exiting.
+
+        (This prevents 'Transport endpoint is not connected' errors.)
+        """
+        if self.image:
+            print "calling guestfs.umount_local()"
+            self.guest.umount_local()
