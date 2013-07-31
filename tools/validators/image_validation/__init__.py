@@ -3,10 +3,16 @@ import getopt
 import guestfs
 import threading
 
+def _mount_local_run(guest):
+    print "calling guestfs.mount_local_run()"
+    guest.mount_local_run()
+    print "guestfs.mount_local_run() returned"
+    
 def _mountFUSE(image, trace=False):
     guest = guestfs.GuestFS()
 
     if trace:
+        pass
         guest.set_trace(1)
 
     guest.add_drive_opts(image, readonly=1)
@@ -26,11 +32,12 @@ def _mountFUSE(image, trace=False):
                 print "%s (ignored)" % msg
 
     guest.mount_local ('mnt')
-    # FIXME: Add conditional to ensure root is mounted.
-    runThread = threading.Thread(target=guest.mount_local_run)
-    runThread.daemon = False
+
+    # FIXME: Add conditional to ensure root is mounted?
+    runThread = threading.Thread(target=_mount_local_run, args=(guest,))
+    runThread.daemon = True
     runThread.start()
-    
+
     import epdb ; epdb.set_trace()
 
     return guest
