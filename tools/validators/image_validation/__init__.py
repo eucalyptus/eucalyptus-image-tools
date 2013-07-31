@@ -1,6 +1,7 @@
 import sys
 import getopt
 import guestfs
+import threading
 
 def _mountFUSE(image, trace=False):
     guest = guestfs.GuestFS()
@@ -21,10 +22,15 @@ def _mountFUSE(image, trace=False):
         for devtup in sorted (mps, compare):
             try:
                 guest.mount_ro (devtup[1], devtup[0])
-                #guest.mount_local ('mnt', options='-m,%s' % devtup[1])
             except RuntimeError as msg:
                 print "%s (ignored)" % msg
 
+    guest.mount_local ('mnt')
+    # FIXME: Add conditional to ensure root is mounted.
+    runThread = threading.Thread(target=guest.mount_local_run)
+    runThread.daemon = False
+    runThread.start()
+    
     import epdb ; epdb.set_trace()
 
     return guest
