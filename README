@@ -1,0 +1,12 @@
+INSTALLATION
+
+Those steps are required for the Export VMDK tool:
+ * yum install python-pip
+ * python-pip install -U psphere
+
+USAGE
+
+Export VMDK tool:
+  python tools/exporters/export_vmdk.py --ip <vSphere IP> --user <vSphere user> --password <vSphere password> --vmName <VM to export or all>
+  Use 'python tools/exporters/export_vmdk.py -h' for more details
+
