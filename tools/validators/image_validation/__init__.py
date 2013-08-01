@@ -2,8 +2,8 @@ import atexit
 import sys
 import getopt
 import guestfs
-import threading
 import time
+from multiprocessing import Process
 
 def _usage():
     """Print validator usage and then exit."""
@@ -53,7 +53,7 @@ def _mountFUSE(guest, mountpoint):
     guest.mount_local (mountpoint)
 
     # FIXME: Add conditional to ensure root is mounted?
-    runThread = threading.Thread(target=_mount_local_run, args=(guest,))
+    runThread = Process(target=_mount_local_run, args=(guest,))
     runThread.daemon = True
     runThread.start()
 
@@ -93,7 +93,7 @@ class ImageAccess():
             self.guest = _lightFUSE(self.image, trace=self._trace)
             _mountFUSE(self.guest, self.mountpoint)
             # FIXME: There's a race here with guestfs.mount_local_run().
-            time.sleep(2)
+            #time.sleep(2)
         else:
             print '\n%s: Usage without images not yet supported.\n' % sys.argv[0]
             sys.exit(0)
