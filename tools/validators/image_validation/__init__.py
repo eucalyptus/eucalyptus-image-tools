@@ -3,6 +3,7 @@ import sys
 import getopt
 import guestfs
 import threading
+import time
 
 def _usage():
     """Print validator usage and then exit."""
@@ -66,7 +67,7 @@ class ImageAccess():
         self._trace = trace
         
         try:
-            optlist, arglist = getopt.getopt(sys.argv[1:], 'a:',
+            optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qv',
                                           ['check-dependencies', 'trace'])
         except getopt.GetoptError as e:
             print '\n%s: %s' % (sys.argv[0], e)
@@ -79,13 +80,20 @@ class ImageAccess():
                 self.image = a
             elif o == '--trace':
                 self._trace = True
+            elif o == '-q':
+                self._quiet = True
+            elif o == '-v':
+                self._verbose = True
             else:
                 _usage()
 
+        self.mountpoint = arglist[0]
+
         if self.image:
-            self.mountpoint = arglist[0]
             self.guest = _lightFUSE(self.image, trace=self._trace)
             _mountFUSE(self.guest, self.mountpoint)
+            # FIXME: There's a race here with guestfs.mount_local_run().
+            time.sleep(2)
         else:
             print '\n%s: Usage without images not yet supported.\n' % sys.argv[0]
             sys.exit(0)
