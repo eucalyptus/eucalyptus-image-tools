@@ -1,6 +1,8 @@
+- exporters -
+
 INSTALLATION
 
-Those steps are required for the Export VMDK tool:
+These steps are required for the Export VMDK tool:
  * yum install python-pip
  * python-pip install -U psphere
 
@@ -10,3 +12,17 @@ Export VMDK tool:
   python tools/exporters/export_vmdk.py --ip <vSphere IP> --user <vSphere user> --password <vSphere password> --vmName <VM to export or all>
   Use 'python tools/exporters/export_vmdk.py -h' for more details
 
+------------------------------------------------------------------------
+
+- validators - 
+
+INSTALLATION
+
+These steps are required for using libguestfs image-validation
+functionality:
+
+ * yum install python-libguestfs libguestfs-tools-c
+
+USAGE
+
+ * validate_acpiphp.py [--check-dependencies] [--trace] [--fuse] [-q] [-v] [-a image] mountpoint
