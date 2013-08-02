@@ -75,6 +75,7 @@ class ImageAccess():
         self.fuse_mounted = False
         self.image = None
         self.check_dependencies = False
+        self.mounted = False
         self._quiet = False
         self._verbose = False
         self._trace = trace
@@ -117,8 +118,8 @@ class ImageAccess():
             else:
                 # FIXME: Need to short-circuit this test; takes too long to
                 # exit when this condition is met. Should be instant.
-                print '\n%s: Image-based usage without FUSE mounting not yet supported.\n' % sys.argv[0]
-                sys.exit(0)
+                print '\n%s: Using an image without FUSE.\n' % sys.argv[0]
+                #sys.exit(0)
         else:
             self.vprint('\n%s: Using without an image.\n' % sys.argv[0])
             self.mounted = True         # Leap of faith.
