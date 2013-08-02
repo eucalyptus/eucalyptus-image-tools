@@ -3,6 +3,9 @@ import sys
 from image_validation import ImageAccess
 
 moduleName = 'acpiphp.ko'
+moduleBase = '/lib/modules'
+# Where we expect to find the module--under the kernel version number.
+modulePath = 'kernel/drivers/pci/hotplug'
 
 def validator(trace=False):
     val = ImageAccess(trace)
@@ -20,3 +23,21 @@ def validator(trace=False):
             val.qprint('Did not find: %s' % moduleName)
             del val
             sys.exit(1)
+    else:
+        # Assuming we're not using FUSE, we're doing raw accesses.
+        #import epdb ; epdb.st()
+        checkDirs = ['%s/%s' % (moduleBase, x) for x in val.guest.ls(moduleBase)]
+        modulesFound = []
+        for dir in checkDirs:
+            found = [x for x in val.guest.ls('%s/%s' % (dir, modulePath)) if moduleName in x]
+            if len(found):
+                modulesFound += ['%s/%s/%s' % (dir, modulePath, found)]
+
+        if len(modulesFound):
+            val.qprint('Found: %s' % modulesFound[0])
+            del val
+            sys.exit(0)
+        else:
+            val.qprint('Did not find: %s' % moduleName)
+            del val
+            sys.exit(0)
