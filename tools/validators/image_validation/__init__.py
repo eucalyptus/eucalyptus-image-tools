@@ -107,11 +107,11 @@ class ImageAccess():
                 _usage()
 
         # Doesn't necessarily imply FUSE.
-        self.mountpoint = arglist[0]
 
         if self.image:
             self.guest = _lightOff(self, trace=self._trace)
             if self.fuse:
+                self.mountpoint = arglist[0]
                 _mountFUSE(self, self.mountpoint)
                 self.fuse_mounted = True
                 self.mounted = True
@@ -121,7 +121,8 @@ class ImageAccess():
                 print '\n%s: Using an image without FUSE.\n' % sys.argv[0]
                 #sys.exit(0)
         else:
-            self.vprint('\n%s: Using without an image.\n' % sys.argv[0])
+            self.mountpoint = arglist[0]
+            self.vprint('\n%s: Using direct filesystem access, without an image.\n' % sys.argv[0])
             self.mounted = True         # Leap of faith.
             #sys.exit(0)
 
