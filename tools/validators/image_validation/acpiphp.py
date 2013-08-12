@@ -9,7 +9,7 @@ modulePath = 'kernel/drivers/pci/hotplug'
 
 def validator(trace=False):
     val = ImageAccess(trace)
-    #import epdb ; epdb.st()
+
     if val.mounted:
         modules = os.walk('%s/lib/modules/' % val.mountpoint)
         acpiphp = [x for x in modules if moduleName in x[2]]
@@ -24,14 +24,15 @@ def validator(trace=False):
             del val
             sys.exit(1)
     else:
-        # Assuming we're not using FUSE, we're doing raw accesses.
-        #import epdb ; epdb.st()
+        # We're not using FUSE, we're doing raw accesses.
         checkDirs = ['%s/%s' % (moduleBase, x) for x in val.guest.ls(moduleBase)]
         modulesFound = []
+
         for dir in checkDirs:
             found = [x for x in val.guest.ls('%s/%s' % (dir, modulePath)) if moduleName in x]
             if len(found):
-                modulesFound += ['%s/%s/%s' % (dir, modulePath, found)]
+                for f in found:
+                    modulesFound += ['%s/%s/%s' % (dir, modulePath, f)]
 
         if len(modulesFound):
             val.qprint('Found: %s' % modulesFound[0])

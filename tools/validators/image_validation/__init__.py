@@ -6,9 +6,12 @@ import time
 from multiprocessing import Process
 
 def _usage():
-    """Print validator usage and then exit."""
+    """Print usage and then exit."""
     print '\nUsage:'
-    print '%s [--check-dependencies] [--trace] [--fuse] [-q] [-v] [-a image] mountpoint\n' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] mountpoint' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] -a image' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] --fuse -a image mountpoint' % sys.argv[0]
+    print
     sys.exit(0)                         # By spec, exit 0 unless bad validation.
 
 def _mount_local_run(self):
@@ -29,6 +32,7 @@ def _lightOff(self, trace=False):
     guest.add_drive_opts(self.image, readonly=1)
     guest.launch()
     roots = guest.inspect_os()
+
     if len(roots) == 0:
         raise (Error ('inspect_os: no operating systems found'))
     for root in roots:
@@ -36,6 +40,7 @@ def _lightOff(self, trace=False):
         
         mps = guest.inspect_get_mountpoints (root)
         def compare (a, b): return len(a) - len(b)
+
         for devtup in sorted (mps, compare):
             try:
                 guest.mount_ro (devtup[1], devtup[0])
@@ -52,7 +57,7 @@ def _mountFUSE(self, mountpoint):
     # FIXME: Create this mount point if it doesn't already exist.
     self.guest.mount_local (mountpoint)
 
-    # FIXME: Add conditional to ensure root is mounted?
+    # FIXME: Add conditional to ensure root is mounted.
     runThread = Process(target=_mount_local_run, args=(self,))
     runThread.daemon = True
     runThread.start()
@@ -111,20 +116,24 @@ class ImageAccess():
         if self.image:
             self.guest = _lightOff(self, trace=self._trace)
             if self.fuse:
-                self.mountpoint = arglist[0]
-                _mountFUSE(self, self.mountpoint)
-                self.fuse_mounted = True
-                self.mounted = True
+                if len(arglist):
+                    self.mountpoint = arglist[0]
+                    _mountFUSE(self, self.mountpoint)
+                    self.fuse_mounted = True
+                    self.mounted = True
+                else:
+                    _usage()
             else:
                 # FIXME: Need to short-circuit this test; takes too long to
                 # exit when this condition is met. Should be instant.
-                print '\n%s: Using an image without FUSE.\n' % sys.argv[0]
-                #sys.exit(0)
+                print '\nNote: %s: Using an image without FUSE.\n' % sys.argv[0]
         else:
-            self.mountpoint = arglist[0]
-            self.vprint('\n%s: Using direct filesystem access, without an image.\n' % sys.argv[0])
-            self.mounted = True         # Leap of faith.
-            #sys.exit(0)
+            if len(arglist):
+                self.mountpoint = arglist[0]
+                self.vprint('\n%s: Using direct filesystem access, without an image.\n' % sys.argv[0])
+                self.mounted = True         # Leap of faith.
+            else:
+                _usage()
 
     def __del__(self):
         """Ensures FUSE filesystem is unmounted before exiting.
@@ -136,4 +145,3 @@ class ImageAccess():
             self.guest.umount_local()
         elif self.fuse:
             self.vprint('skipping guestfs.umount_local() call -- nothing mounted')
-            
