@@ -126,11 +126,11 @@ class ImageAccess():
             else:
                 # FIXME: Need to short-circuit this test; takes too long to
                 # exit when this condition is met. Should be instant.
-                print '\nNote: %s: Using an image without FUSE.\n' % sys.argv[0]
+                self.vprint('\nNote: %s: Using an image without FUSE.\n' % sys.argv[0])
         else:
             if len(arglist):
                 self.mountpoint = arglist[0]
-                self.vprint('\n%s: Using direct filesystem access, without an image.\n' % sys.argv[0])
+                self.vprint('\nNote: %s: Using direct filesystem access, without an image.\n' % sys.argv[0])
                 self.mounted = True         # Leap of faith.
             else:
                 _usage()
