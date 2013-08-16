@@ -1,6 +1,5 @@
 import os
 import sys
-from image_validation import ImageAccess
 
 # fileName = 'interfaces'
 # fileBase = '/etc/network'
@@ -32,21 +31,15 @@ def _check_ubuntu(val):
         val.qprint('Did not find any automatically enabled Ethernet interfaces.')
         return False
 
-def validator(trace=False):
-    val = ImageAccess(trace)
-    #import epdb ; epdb.st()
-
+def validator(val, trace=False):
     if val.mounted:
         if _check_redhat(val):
-            del val
-            sys.exit(0)
+            return True
         elif _check_ubuntu(val):
-            del val
-            sys.exit(0)
+            return True
         else:
-            del val
-            sys.exit(1)
+            return False
     else:
+        val.qprint('Note: eth_device check not yet implemented for umounted images.')
         # FIXME: implement
-        del val
-        sys.exit(0)
+        return True

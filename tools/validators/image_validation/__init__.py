@@ -1,4 +1,4 @@
-import atexit
+#import atexit
 import sys
 import getopt
 import guestfs
@@ -141,7 +141,19 @@ class ImageAccess():
         (This prevents 'Transport endpoint is not connected' errors.)
         """
         if self.fuse_mounted:
-            self.vprint('calling guestfs.umount_local()')
-            self.guest.umount_local()
+            #self.vprint('calling guestfs.umount_local()')
+            print('calling guestfs.umount_local()')
+            #import epdb ; epdb.st()
+            for i in range(0,10):
+                try:
+                    self.guest.umount_local()
+                except RuntimeError as e:
+                    print 'guest.umount_local(%d): %s' % (i, e)
+                    time.sleep(1)
+                else:
+                    break
+                finally:
+                    if i == 9:
+                        import epdb ; epdb.st()
         elif self.fuse:
             self.vprint('skipping guestfs.umount_local() call -- nothing mounted')
