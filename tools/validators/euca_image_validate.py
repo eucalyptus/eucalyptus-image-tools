@@ -4,7 +4,7 @@ import sys
 import os
 import imp
 
-from image_validation import ImageAccess
+from euca_image_validation import ImageAccess
 
 toCheck = []
 retCode = 0
