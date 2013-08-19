@@ -4,23 +4,25 @@ import sys
 import os
 import imp
 
-from euca_image_validation import ImageAccess
+import euca_image_validation
 
 toCheck = []
 retCode = 0
 
-for root, dirs, files in os.walk('validation_modules'):
+# FIXME: clean up the module-path searching/handling.
+for root, dirs, files in os.walk(os.path.dirname(euca_image_validation.__file__)):
     toCheck += ['%s/%s' % (root, x) for x in files]
 
-toSource = [os.path.splitext(x)[0] for x in toCheck if x.endswith('.py')]
+toSource = [os.path.splitext(x)[0] for x in toCheck if (x.endswith('.py') and not x.endswith('/__init__.py'))]
 
 mods = []
-for mod in toSource:
+for modLong in toSource:
+    mod = '%s/%s' % ('euca_image_validation', os.path.basename(modLong))
     (f, fn, d) = imp.find_module(mod)
-    mods.append((os.path.basename(mod), imp.load_module(mod, f, fn, d)))
+    mods.append((os.path.basename(modLong), imp.load_module(mod, f, fn, d)))
 
 if len(mods):
-    imageHandle = ImageAccess(trace=False)
+    imageHandle = euca_image_validation.ImageAccess(trace=False)
 else:
     sys.exit(0)
 
@@ -32,7 +34,5 @@ for mod in mods:
         retCode = 1
 
 del imageHandle
-
-#import epdb ; epdb.st()
 
 sys.exit(retCode)
