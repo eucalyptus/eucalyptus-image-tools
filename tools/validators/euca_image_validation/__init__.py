@@ -66,12 +66,28 @@ class ImageAccess():
     """Class for accessing images, either directly via FUSE or using a previous (external) mount to the filesystem."""
 
     def qprint(self, msg):
+        """Prints to stdout unless -q (quiet mode) specified."""
         if not self._quiet:
             print msg
 
     def vprint(self, msg):
+        """Prints to stdout if -v (verbose mode) specified.
+        (Note: --trace implies -v.)"""
         if self._verbose:
             print msg
+
+    def is_mounted(self):
+        """Returns True if image mounted by internal mechanism, False if not."""
+        return self.mounted
+
+    def get_mountpoint(self):
+        """Returns the internal mountpoint of an image (or None if unmounted)."""
+        return self.mountpoint
+
+    ### FIXME: Need a method to consolidate walking/looking for files
+    ### in a directory hierarchy and returning them. This will eliminate
+    ### the need for validation scripts to worry about whether filesystem
+    ### is mounted.
 
     def __init__(self, trace=False):
         """Handles command-line aruguments and sets up image access."""
@@ -83,6 +99,7 @@ class ImageAccess():
         self._quiet = False
         self._verbose = False
         self._trace = trace
+        self.mountpoint = None
         
         try:
             optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qv',
