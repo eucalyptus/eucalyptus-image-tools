@@ -1,6 +1,5 @@
 import os
 import sys
-#from image_validation import ImageAccess
 
 moduleName = 'acpiphp.ko'
 moduleBase = '/lib/modules'
