@@ -27,12 +27,16 @@ else:
     sys.exit(0)
 
 for mod in mods:
+    # FIXME: Wrap for exceptions.
+    # FIXME: Optionally spit out a success matrix?
     success = mod[1].validator(imageHandle)
 
     if not success:
         imageHandle.vprint('Failed to validate: %s' % mod[0])
         retCode = 1
 
-del imageHandle
+# Necessary to prevent stale/disconnected FUSE mount.
+# See documentation for ImageAccess.__del__().
+imageHandle.__del__()
 
 sys.exit(retCode)
