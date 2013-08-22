@@ -155,17 +155,23 @@ class ImageAccess():
         """Ensures FUSE filesystem is unmounted before exiting.
 
         (This prevents 'Transport endpoint is not connected' errors.)
+
+        Note that this is called explicitly in euca_image_validate.py.
+        If it's not called explicitly and instead is called implicitly
+        during program exit, the unmount will likely block/fail and leave
+        the mount stale/disconnected.
         """
         if self.fuse_mounted:
             self.vprint('calling guestfs.umount_local()')
 
-            for i in range(0,10):
+            for i in range(0, 10):
                 try:
                     self.guest.umount_local()
                 except RuntimeError as e:
                     print 'guest.umount_local(%d): %s' % (i, e)
                     time.sleep(1)
                 else:
+                    self.fuse_mounted = False
                     break
                 finally:
                     if i == 9:
