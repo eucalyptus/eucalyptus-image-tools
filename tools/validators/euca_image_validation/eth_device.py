@@ -2,44 +2,63 @@ import glob
 import os
 import sys
 
-redhatFilePrefix = '/etc/sysconfig/network-scripts/ifcfg-eth'
+# FIXME: clean this up.
+redhatDirName = '/etc/sysconfig/network-scripts'
+redhatFileStub = 'ifcfg-eth'
+redhatFilePrefix = '%s/%s' % (redhatDirName, redhatFileStub)
 
-# FIXME: Smoosh these together.
 ubuntuFileName = 'interfaces'
 ubuntuDirName = '/etc/network'
 
 def _check_redhat_mounted(val):
+    retVal = False
+    filesContents = {}
     fullPrefix = '%s/%s*' % (val.get_mountpoint(), redhatFilePrefix)
     ifFiles =  glob.glob(fullPrefix)
-    filesContents = {}
-    retVal = False
     
     for ifFile in ifFiles:
         try:
             f = open(ifFile, 'r')
             fileContents = f.readlines()
+            f.close()
             filesContents[ifFile] = {}
 
             for line in fileContents:
                 lineTup = tuple(line.strip().split('='))
                 filesContents[ifFile][lineTup[0]] = lineTup[1]
 
-            f.close()
-
-            val.vprint('Checking: %s' % filesContents[ifFile]['DEVICE'])
+            val.vprint('Checking interface: %s' % filesContents[ifFile]['DEVICE'])
             if filesContents[ifFile]['ONBOOT'].count('yes') or filesContents[ifFile]['ONBOOT'].count('on'):
                 
                 val.qprint('Found interface: %s' % filesContents[ifFile]['DEVICE'])
                 retVal = True
         except Exception as e:
-            val.qprint("Cannot open/read file '%s': %s" % (ifFile, e))
+            val.qprint("Cannot analyze file '%s': %s" % (ifFile, e))
 
     return retVal
 
 def _check_redhat_unmounted(val):
-    # FIXME: implement
-    val.vprint('Note: eth_device check not yet implemented for unmounted Red Hat images.')
-    return False
+    retVal = False
+    filesContents = {}
+    ifFiles = ['%s/%s' % (redhatDirName, x) for x in val.guest.ls(redhatDirName) if redhatFileStub in x]
+
+    for ifFile in ifFiles:
+        try:
+            fileContents = val.guest.read_lines(ifFile)
+            filesContents[ifFile] = {}
+
+            for line in fileContents:
+                lineTup = tuple(line.strip().split('='))
+                filesContents[ifFile][lineTup[0]] = lineTup[1]
+
+            val.vprint('Checking interface: %s' % filesContents[ifFile]['DEVICE'])
+            if filesContents[ifFile]['ONBOOT'].count('yes') or filesContents[ifFile]['ONBOOT'].count('on'):
+                val.qprint('Found interface: %s' % filesContents[ifFile]['DEVICE'])
+                retVal = True
+        except Exception as e:
+            val.qprint("Cannot analyze file '%s': %s" % (ifFile, e))
+
+    return retVal
 
 def _check_ubuntu_mounted(val):
     fullPath = '%s/%s/%s' % (val.get_mountpoint(), ubuntuDirName, ubuntuFileName)
@@ -49,6 +68,7 @@ def _check_ubuntu_mounted(val):
     try:
         f = open(fullPath, 'r')
         fileContents = f.readlines()
+        f.close()
     except Exception as e:
         val.qprint("Cannot open/read file '%s': %s" % (fullPath, e))
         return False
