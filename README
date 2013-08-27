@@ -18,11 +18,15 @@ Export VMDK tool:
 
 INSTALLATION
 
-These steps are required for using libguestfs image-validation
+These steps are required for using the libguestfs image-validation
 functionality:
 
  * yum install python-libguestfs libguestfs-tools-c
 
 USAGE
 
- * validate_acpiphp.py [--check-dependencies] [--trace] [--fuse] [-q] [-v] [-a image] mountpoint
+Any one of the following:
+
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] mountpoint
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] -a image
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] --fuse -a image mountpoint

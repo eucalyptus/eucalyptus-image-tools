@@ -112,6 +112,7 @@ class ImageAccess():
         for o, a in optlist:
             if o == '--check-dependencies':
                 self.check_dependencies = True
+                self.vprint('--check-dependencies not yet implemented.')
             elif o == '-a':
                 self.image = a
             elif o == '--trace':
