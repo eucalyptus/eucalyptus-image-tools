@@ -10,6 +10,8 @@ def _usage():
     print '%s [--check-dependencies] [--trace] [-q] [-v] -a image' % sys.argv[0]
     print '%s [--check-dependencies] [--trace] [-q] [-v] --fuse -a image mountpoint' % sys.argv[0]
     print
+    print '(Mounting of images with -a is currently unsupported on non-Linux platforms.)'
+    print
     sys.exit(0)                         # By spec, exit 0 unless bad validation.
 
 # FIXME: move into class?
@@ -79,7 +81,7 @@ class ImageAccess():
         # FIXME: Create this mount point if it doesn't already exist.
         self.guest.mount_local(self.mountpoint)
     
-        # FIXME: Add conditional to ensure root is mounted.
+        # FIXME: Add conditional to ensure root is mounted?
         runThread = Process(target=_mount_local_run, args=(self,))
         runThread.daemon = True
         runThread.start()
@@ -101,12 +103,6 @@ class ImageAccess():
         self._trace = trace
         self.mountpoint = None
         
-        try:
-            import guestfs
-            self.guestfs = guestfs
-        except Exception as e:
-            self.qprint('No libguestfs functionality available: %s' % e)
-
         try:
             optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qv',
                                           ['check-dependencies', 'trace',
@@ -134,8 +130,20 @@ class ImageAccess():
             else:
                 _usage()
 
-        # Doesn't necessarily imply FUSE.
+        try:
+            import guestfs
+            self.guestfs = guestfs
+        except Exception as e:
+            if self.image:
+                print
+                print 'No libguestfs functionality available: %s' % e
+                _usage()
 
+        if self.fuse and not self.image:
+            # Must specify an image with -a for --fuse.
+            _usage()
+
+        # Doesn't necessarily imply FUSE.
         if self.image:
             self.guest = self._lightOff()
             if self.fuse:
