@@ -1,6 +1,5 @@
 import sys
 import getopt
-import guestfs
 import time
 from multiprocessing import Process
 
@@ -20,33 +19,6 @@ def _mount_local_run(self):
     self.vprint('calling guestfs.mount_local_run()')
     self.guest.mount_local_run()
     self.vprint('guestfs.mount_local_run() returned')
-
-def _lightOff(self, trace=False):
-    """Initiaizes guestfs for an image."""
-    guest = guestfs.GuestFS()
-
-    if trace:
-        guest.set_trace(1)
-
-    guest.add_drive_opts(self.image, readonly=1)
-    guest.launch()
-    roots = guest.inspect_os()
-
-    if len(roots) == 0:
-        raise (Error ('inspect_os: no operating systems found'))
-    for root in roots:
-        self.vprint('Root device: %s' % root)
-        
-        mps = guest.inspect_get_mountpoints (root)
-        def compare (a, b): return len(a) - len(b)
-
-        for devtup in sorted (mps, compare):
-            try:
-                guest.mount_ro (devtup[1], devtup[0])
-            except RuntimeError as msg:
-                self.vprint('%s (ignored)' % msg)
-
-    return guest
 
 def _mountFUSE(self, mountpoint):
     """Mounts FUSE filesystem at specified mountpoint.
@@ -84,6 +56,33 @@ class ImageAccess():
         """Returns the internal mountpoint of an image (or None if unmounted)."""
         return self.mountpoint
 
+    def _lightOff(self):
+        """Initiaizes guestfs for an image."""
+        guest = self.guestfs.GuestFS()
+    
+        if self._trace:
+            guest.set_trace(1)
+    
+        guest.add_drive_opts(self.image, readonly=1)
+        guest.launch()
+        roots = guest.inspect_os()
+    
+        if len(roots) == 0:
+            raise (Error ('inspect_os: no operating systems found'))
+        for root in roots:
+            self.vprint('Root device: %s' % root)
+            
+            mps = guest.inspect_get_mountpoints (root)
+            def compare (a, b): return len(a) - len(b)
+    
+            for devtup in sorted (mps, compare):
+                try:
+                    guest.mount_ro (devtup[1], devtup[0])
+                except RuntimeError as msg:
+                    self.vprint('%s (ignored)' % msg)
+    
+        return guest
+
     ### FIXME: Need a method to consolidate walking/looking for files
     ### in a directory hierarchy and returning them. This will eliminate
     ### the need for validation scripts to worry about whether filesystem
@@ -101,6 +100,12 @@ class ImageAccess():
         self._trace = trace
         self.mountpoint = None
         
+        try:
+            import guestfs
+            self.guestfs = guestfs
+        except Exception as e:
+            self.qprint('No libguestfs functionality available: %s' % e)
+
         try:
             optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qv',
                                           ['check-dependencies', 'trace',
@@ -131,7 +136,7 @@ class ImageAccess():
         # Doesn't necessarily imply FUSE.
 
         if self.image:
-            self.guest = _lightOff(self, trace=self._trace)
+            self.guest = self._lightOff()
             if self.fuse:
                 if len(arglist):
                     self.mountpoint = arglist[0]
