@@ -12,6 +12,7 @@ def _usage():
     print
     sys.exit(0)                         # By spec, exit 0 unless bad validation.
 
+# FIXME: move into class?
 def _mount_local_run(self):
     """Called in thread to process activity on fuse-mounted filesystem.
     Blocks until filesystem is unmounted.
@@ -19,19 +20,6 @@ def _mount_local_run(self):
     self.vprint('calling guestfs.mount_local_run()')
     self.guest.mount_local_run()
     self.vprint('guestfs.mount_local_run() returned')
-
-def _mountFUSE(self, mountpoint):
-    """Mounts FUSE filesystem at specified mountpoint.
-
-    GuestFS must already have been initialized.
-    """
-    # FIXME: Create this mount point if it doesn't already exist.
-    self.guest.mount_local (mountpoint)
-
-    # FIXME: Add conditional to ensure root is mounted.
-    runThread = Process(target=_mount_local_run, args=(self,))
-    runThread.daemon = True
-    runThread.start()
 
 class ImageAccess():
 
@@ -82,6 +70,19 @@ class ImageAccess():
                     self.vprint('%s (ignored)' % msg)
     
         return guest
+
+    def _mountFUSE(self):
+        """Mounts FUSE filesystem at specified mountpoint.
+    
+        GuestFS must already have been initialized.
+        """
+        # FIXME: Create this mount point if it doesn't already exist.
+        self.guest.mount_local(self.mountpoint)
+    
+        # FIXME: Add conditional to ensure root is mounted.
+        runThread = Process(target=_mount_local_run, args=(self,))
+        runThread.daemon = True
+        runThread.start()
 
     ### FIXME: Need a method to consolidate walking/looking for files
     ### in a directory hierarchy and returning them. This will eliminate
@@ -140,7 +141,7 @@ class ImageAccess():
             if self.fuse:
                 if len(arglist):
                     self.mountpoint = arglist[0]
-                    _mountFUSE(self, self.mountpoint)
+                    self._mountFUSE()
                     self.fuse_mounted = True
                     self.mounted = True
                 else:
@@ -174,13 +175,13 @@ class ImageAccess():
                 try:
                     self.guest.umount_local()
                 except RuntimeError as e:
-                    print 'guest.umount_local(%d): %s' % (i, e)
+                    print 'guestfs.umount_local(%d): %s' % (i, e)
                     time.sleep(1)
                 else:
                     self.fuse_mounted = False
                     break
                 finally:
                     if i == 9:
-                        import epdb ; epdb.st()
+                        print 'guestfs.umount_local: giving up...'
         elif self.fuse:
             self.vprint('skipping guestfs.umount_local() call -- nothing mounted')
