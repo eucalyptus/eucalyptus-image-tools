@@ -40,7 +40,13 @@ def _check_redhat_mounted(val):
 def _check_redhat_unmounted(val):
     retVal = False
     filesContents = {}
-    ifFiles = ['%s/%s' % (redhatDirName, x) for x in val.guest.ls(redhatDirName) if redhatFileStub in x]
+    try:
+        dirFiles = val.guest.ls(redhatDirName)
+    except RuntimeError:
+        # In all likelihood, directory doesn't exist--likely we're not on RH.
+        return retVal
+
+    ifFiles = ['%s/%s' % (redhatDirName, x) for x in dirFiles if redhatFileStub in x]
 
     for ifFile in ifFiles:
         try:
