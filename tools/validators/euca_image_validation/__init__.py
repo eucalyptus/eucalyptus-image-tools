@@ -1,3 +1,4 @@
+import os
 import sys
 import getopt
 import time
@@ -85,6 +86,44 @@ class ImageAccess():
         runThread = Process(target=_mount_local_run, args=(self,))
         runThread.daemon = True
         runThread.start()
+
+    def find_files(self, pathName, fileName, glob=False, omitMountpoint=True):
+        """Finds filename 'file' under path 'path'.
+
+        Returns a list of matching paths, optionally globbing the filename
+        and omitting (trimming away) the any leading mount-point path.
+
+        If 'file' is None, all filenames are returned.
+
+        This provides an abstraction layer so that validators do not need to
+        worry about whether an image is mounted or is being accessed via the
+        libguestfs API."""
+        
+        found = []
+
+        if fileName == None and glob == True:
+            # FIXME: Doesn't make sense--raise exception?
+            return found
+
+        if self.mounted:
+            # Using filesystem.
+            fileList = os.walk('%s%s' % (self.mountpoint, pathName))
+            foundList = [x for x in fileList if fileName in x[2]]
+
+            for x in foundList:
+                for y in x[2]:
+                    fullPath = '%s/%s' % (x[0], y)
+
+                    if omitMountpoint and fullPath.startswith(self.mountpoint):
+                        found.append(fullPath[len(self.mountpoint):])
+                    else:
+                        found.append(fullPath)
+        else:
+            # Using libguestfs API.
+            fileList = self.guest.find(pathName)
+            found = ['%s%s' % (pathName, x) for x in fileList if fileName in x]
+
+        return found
 
     ### FIXME: Need a method to consolidate walking/looking for files
     ### in a directory hierarchy and returning them. This will eliminate
