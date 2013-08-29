@@ -9,16 +9,17 @@ import euca_image_validation
 toCheck = []
 retCode = 0
 
-# FIXME: clean up the module-path searching/handling?
 modDir = os.path.dirname(euca_image_validation.__file__)
 sys.path.insert(0, modDir)
 
 for root, dirs, files in os.walk(modDir):
     toCheck += ['%s/%s' % (root, x) for x in files]
 
-toSource = [os.path.splitext(x)[0] for x in toCheck if (x.endswith('.py') and not x.endswith('/__init__.py'))]
+toSource = [os.path.splitext(x)[0] for x in toCheck
+            if (x.endswith('.py') and not x.endswith('/__init__.py'))]
 
 mods = []
+
 for modLong in toSource:
     mod = os.path.basename(modLong)
     (f, fn, d) = imp.find_module(mod)
