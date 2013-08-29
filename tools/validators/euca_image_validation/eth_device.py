@@ -110,7 +110,7 @@ def _check_ubuntu_unmounted(val):
         val.qpring('Did not find any automatically enabled Ethernet interfaces.')
         return False
 
-def validator(val, trace=False):
+def validator(val):
     if val.is_mounted():
         if _check_redhat_mounted(val):
             return True

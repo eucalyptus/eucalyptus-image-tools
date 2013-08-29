@@ -1,18 +1,14 @@
-import os
-import sys
+module_name = 'acpiphp.ko'
+module_base = '/lib/modules'
 
-moduleName = 'acpiphp.ko'
-moduleBase = '/lib/modules'
-# Where we expect to find the module--under the kernel version number.
-modulePath = 'kernel/drivers/pci/hotplug'
+def validator(val):
+    found_files = val.find_files(module_base, module_name)
 
-def validator(val, trace=False):
-    foundFiles = val.find_files(moduleBase, moduleName)
-
-    if len(foundFiles):
-        for found_file in foundFiles:
+    if len(found_files):
+        for found_file in found_files:
             val.qprint('Found module: %s' % found_file)
         return True
     else:
-        val.qprint('Did not find module: %s' % moduleName)
+        val.qprint('Did not find module: %s' % module_name)
+
     return False

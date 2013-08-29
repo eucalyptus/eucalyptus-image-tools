@@ -4,6 +4,7 @@ import getopt
 import time
 from multiprocessing import Process
 
+
 def _usage():
     """Print usage and then exit."""
     print '\nUsage:'
@@ -15,18 +16,25 @@ def _usage():
     print
     sys.exit(0)                         # By spec, exit 0 unless bad validation.
 
-# FIXME: move into class?
+
 def _mount_local_run(self):
     """Called in thread to process activity on fuse-mounted filesystem.
+
     Blocks until filesystem is unmounted.
+
     """
+    # FIXME: move into class?
     self.vprint('calling guestfs.mount_local_run()')
     self.guest.mount_local_run()
     self.vprint('guestfs.mount_local_run() returned')
 
-class ImageAccess():
 
-    """Class for accessing images, either directly via FUSE or using a previous (external) mount to the filesystem."""
+class ImageAccess():
+    """Class for accessing images.
+
+    Can access iamges either directly via FUSE or using a previous (external) mount to the filesystem.
+
+    """
 
     def qprint(self, msg):
         """Prints to stdout unless -q (quiet mode) specified."""
@@ -35,7 +43,10 @@ class ImageAccess():
 
     def vprint(self, msg):
         """Prints to stdout if -v (verbose mode) specified.
-        (Note: --trace implies -v.)"""
+
+        (Note: --trace implies -v.)
+
+        """
         if self._verbose:
             print msg
 
@@ -47,7 +58,7 @@ class ImageAccess():
         """Returns the internal mountpoint of an image (or None if unmounted)."""
         return self.mountpoint
 
-    def _lightOff(self):
+    def _light_off(self):
         """Initiaizes guestfs for an image."""
         guest = self.guestfs.GuestFS()
     
@@ -60,34 +71,35 @@ class ImageAccess():
     
         if len(roots) == 0:
             raise (Error ('inspect_os: no operating systems found'))
+
         for root in roots:
             self.vprint('Root device: %s' % root)
-            
             mps = guest.inspect_get_mountpoints (root)
-            def compare (a, b): return len(a) - len(b)
+
+            def _compare (a, b): return len(a) - len(b)
     
-            for devtup in sorted (mps, compare):
+            for devtup in sorted(mps, _compare):
                 try:
-                    guest.mount_ro (devtup[1], devtup[0])
+                    guest.mount_ro(devtup[1], devtup[0])
                 except RuntimeError as msg:
                     self.vprint('%s (ignored)' % msg)
     
         return guest
 
-    def _mountFUSE(self):
+    def _mount_fuse(self):
         """Mounts FUSE filesystem at specified mountpoint.
     
         GuestFS must already have been initialized.
+
         """
         # FIXME: Create this mount point if it doesn't already exist.
         self.guest.mount_local(self.mountpoint)
-    
         # FIXME: Add conditional to ensure root is mounted?
-        runThread = Process(target=_mount_local_run, args=(self,))
-        runThread.daemon = True
-        runThread.start()
+        run_process = Process(target=_mount_local_run, args=(self,))
+        run_process.daemon = True
+        run_process.start()
 
-    def find_files(self, pathName, fileName, glob=False, omitMountpoint=True):
+    def find_files(self, path_name, file_name, glob=False, omit_mountpoint=True):
         """Finds filename 'file' under path 'path'.
 
         Returns a list of matching paths, optionally globbing the filename
@@ -97,31 +109,33 @@ class ImageAccess():
 
         This provides an abstraction layer so that validators do not need to
         worry about whether an image is mounted or is being accessed via the
-        libguestfs API."""
+        libguestfs API.
+
+        """
         
         found = []
 
-        if fileName == None and glob == True:
+        if file_name is None and glob is True:
             # FIXME: Doesn't make sense--raise exception?
             return found
 
         if self.mounted:
             # Using filesystem.
-            fileList = os.walk('%s%s' % (self.mountpoint, pathName))
-            foundList = [x for x in fileList if fileName in x[2]]
+            file_list = os.walk('%s%s' % (self.mountpoint, path_name))
+            found_list = [x for x in file_list if file_name in x[2]]
 
-            for x in foundList:
+            for x in found_list:
                 for y in x[2]:
-                    fullPath = '%s/%s' % (x[0], y)
+                    full_path = '%s/%s' % (x[0], y)
 
-                    if omitMountpoint and fullPath.startswith(self.mountpoint):
-                        found.append(fullPath[len(self.mountpoint):])
+                    if omit_mountpoint and full_path.startswith(self.mountpoint):
+                        found.append(full_path[len(self.mountpoint):])
                     else:
-                        found.append(fullPath)
+                        found.append(full_path)
         else:
             # Using libguestfs API.
-            fileList = self.guest.find(pathName)
-            found = ['%s%s' % (pathName, x) for x in fileList if fileName in x]
+            file_list = self.guest.find(path_name)
+            found = ['%s%s' % (path_name, x) for x in file_list if file_name in x]
 
         return found
 
@@ -133,7 +147,7 @@ class ImageAccess():
     def __init__(self, trace=False):
         """Handles command-line aruguments and sets up image access."""
         self.fuse = False
-        self.fuse_mounted = False
+        self._fuse_mounted = False
         self.image = None
         self.check_dependencies = False
         self.mounted = False
@@ -184,12 +198,12 @@ class ImageAccess():
 
         # Doesn't necessarily imply FUSE.
         if self.image:
-            self.guest = self._lightOff()
+            self.guest = self._light_off()
             if self.fuse:
                 if len(arglist):
                     self.mountpoint = arglist[0]
-                    self._mountFUSE()
-                    self.fuse_mounted = True
+                    self._mount_fuse()
+                    self._fuse_mounted = True
                     self.mounted = True
                 else:
                     _usage()
@@ -214,8 +228,9 @@ class ImageAccess():
         If it's not called explicitly and instead is called implicitly
         during program exit, the unmount will likely block/fail and leave
         the mount stale/disconnected.
+
         """
-        if self.fuse_mounted:
+        if self._fuse_mounted:
             self.vprint('calling guestfs.umount_local()')
 
             for i in range(0, 10):
@@ -225,7 +240,7 @@ class ImageAccess():
                     print 'guestfs.umount_local(%d): %s' % (i, e)
                     time.sleep(1)
                 else:
-                    self.fuse_mounted = False
+                    self._fuse_mounted = False
                     break
                 finally:
                     if i == 9:
