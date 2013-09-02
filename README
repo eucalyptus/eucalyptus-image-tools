@@ -27,6 +27,6 @@ USAGE
 
 Any one of the following:
 
- * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] mountpoint
- * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] -a image
- * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] --fuse -a image mountpoint
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] [-d] mountpoint
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] [-d] -a image
+ * validate_acpiphp.py [--check-dependencies] [--trace] [-q] [-v] [-d] --fuse -a image mountpoint

@@ -9,9 +9,9 @@ from multiprocessing import Process
 def _usage():
     """Print usage and then exit."""
     print '\nUsage:'
-    print '%s [--check-dependencies] [--trace] [-q] [-v] mountpoint' % sys.argv[0]
-    print '%s [--check-dependencies] [--trace] [-q] [-v] -a image' % sys.argv[0]
-    print '%s [--check-dependencies] [--trace] [-q] [-v] --fuse -a image mountpoint' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] [-d] mountpoint' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] [-d] -a image' % sys.argv[0]
+    print '%s [--check-dependencies] [--trace] [-q] [-v] [-d] --fuse -a image mountpoint' % sys.argv[0]
     print
     print '(Mounting of images with -a is currently unsupported on non-Linux platforms.)'
     print
@@ -25,9 +25,9 @@ def _mount_local_run(self):
 
     """
     # FIXME: move into class?
-    self.vprint('calling guestfs.mount_local_run()')
+    self.dprint('calling guestfs.mount_local_run()')
     self.guest.mount_local_run()
-    self.vprint('guestfs.mount_local_run() returned')
+    self.dprint('guestfs.mount_local_run() returned')
 
 
 class ImageAccess():
@@ -45,10 +45,19 @@ class ImageAccess():
     def vprint(self, msg):
         """Prints to stdout if -v (verbose mode) specified.
 
-        (Note: --trace implies -v.)
+        (Note: --trace or -d implies -v.)
 
         """
         if self._verbose:
+            print msg
+
+    def dprint(self, msg):
+        """Prints to stdout if -d (debug mode) specified.
+
+        (Note: --trace implies -d.)
+
+        """
+        if self._debug:
             print msg
 
     def is_mounted(self):
@@ -74,7 +83,7 @@ class ImageAccess():
             raise (Error ('inspect_os: no operating systems found'))
 
         for root in roots:
-            self.vprint('Root device: %s' % root)
+            self.dprint('Root device: %s' % root)
             mps = guest.inspect_get_mountpoints (root)
 
             def _compare (a, b): return len(a) - len(b)
@@ -83,7 +92,7 @@ class ImageAccess():
                 try:
                     guest.mount_ro(devtup[1], devtup[0])
                 except RuntimeError as msg:
-                    self.vprint('%s (ignored)' % msg)
+                    self.dprint('%s (ignored)' % msg)
     
         return guest
 
@@ -100,12 +109,14 @@ class ImageAccess():
         run_process.daemon = True
         run_process.start()
 
+    # Perhaps change default value of omit_mountpoint to False?
     def find_files(self, pathname, filename, glob=False, omit_mountpoint=True):
         """Finds file 'filename' under path 'pathname'.
 
         Returns a list of matching paths, optionally globbing the filename
         and omitting (trimming away) the any leading mount-point path
-        ('omit_mountpoint').
+        ('omit_mountpoint'). Note that 'omit_mountpoint' has no effect when
+        using unmounted images through the libguestfs API.
 
         If 'filename' is None, all filenames are returned.
 
@@ -114,11 +125,14 @@ class ImageAccess():
         libguestfs API.
 
         """
+
+        # FIXME: Need to make note about "'filename' is None" above true!
+        
         found = []
 
         if filename is None and glob is True:
-            # FIXME: Doesn't make sense--raise exception?
-            return found
+            # Doesn't make sense--raise exception?
+            return []
 
         if self.mounted:
             # Using filesystem.
@@ -138,24 +152,46 @@ class ImageAccess():
                                 found.append('%s/%s' % (root, x))
         else:
             # Using libguestfs API.
-            files = self.guest.find(pathname)
+            try:
+                files = self.guest.find(pathname)
+            except RuntimeError as e:
+                # In all likelihood, this directory doesn't exist.
+                self.dprint("Ignoring RuntimeError inspecting '%s' (%s), returning empty list." % (pathname, e))
+                return []
 
             if glob:
                 found = ['%s%s' % (pathname, x) for x in files if fnmatch.fnmatch(os.path.basename(x), filename) and self.guest.is_file('%s%s' % (pathname, x))]
             else:
-                found = ['%s%s' % (pathname, x) for x in files if filename == x and self.guest.is_file('%s%s' % (pathname, x))]
+                found = ['%s%s' % (pathname, x) for x in files if filename == os.path.basename(x) and self.guest.is_file('%s%s' % (pathname, x))]
 
         return found
 
     def read_file(self, filename):
-        """Returns the contents of file 'filename'."""
-        pass
-        
-    ### FIXME: Need a method to consolidate walking/looking for files
-    ### in a directory hierarchy and returning them. This will eliminate
-    ### the need for validation scripts to worry about whether filesystem
-    ### is mounted.
+        """Returns the contents of file 'filename'.
 
+        This provides an abstraction layer so that validators do not need to
+        worry about whether an image is mounted or is being accessed via the
+        libguestfs API.
+
+        """
+        if self.mounted:
+            # Using filesystem.
+            try:
+                f = open(filename, 'r')
+                contents = f.readlines()
+                f.close()
+                return contents
+            except Exception as e:
+                self.dprint("Cannot open/read file '%s': %s" % (filename, e))
+                return []
+        else:
+            try:
+                contents = self.guest.read_lines(filename)
+                return contents
+            except Exception as e:
+                self.dprint("Cannot read file '%s': %s" % (filename, e))
+                return []
+        
     def __init__(self, trace=False):
         """Handles command-line aruguments and sets up image access."""
         self.fuse = False
@@ -165,11 +201,12 @@ class ImageAccess():
         self.mounted = False
         self._quiet = False
         self._verbose = False
+        self._debug = False
         self._trace = trace
         self.mountpoint = None
         
         try:
-            optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qv',
+            optlist, arglist = getopt.getopt(sys.argv[1:], 'a:qvd',
                                           ['check-dependencies', 'trace',
                                            'fuse'])
         except getopt.GetoptError as e:
@@ -185,11 +222,20 @@ class ImageAccess():
             elif o == '--trace':
                 self._trace = True
                 self._verbose = True
+                self._debug = True
+                self._quiet = False
             elif o == '-q':
-                if not self._trace and not self._verbose:
+                # This check should be moved into the qprint function;
+                # otherwise, it's dependent upon the order of the arguments.
+                if not self._trace and not self._verbose and not self._debug:
                     self._quiet = True
             elif o == '-v':
                 self._verbose = True
+                self._quiet = False
+            elif o == '-d':
+                self._debug = True
+                self._verbose = True
+                self._quiet = False
             elif o == '--fuse':
                 self.fuse = True
             else:
@@ -222,11 +268,11 @@ class ImageAccess():
             else:
                 # FIXME: Need to short-circuit this test; takes too long to
                 # exit when this condition is met. Should be instant.
-                self.vprint('\nNote: %s: Using an image without FUSE.\n' % sys.argv[0])
+                self.dprint('\nNote: %s: Using an image without FUSE.\n' % sys.argv[0])
         else:
             if len(arglist):
                 self.mountpoint = arglist[0]
-                self.vprint('\nNote: %s: Using direct filesystem access, without an image.\n' % sys.argv[0])
+                self.dprint('\nNote: %s: Using direct filesystem access, without an image.\n' % sys.argv[0])
                 self.mounted = True         # Leap of faith.
             else:
                 _usage()
@@ -243,7 +289,7 @@ class ImageAccess():
 
         """
         if self._fuse_mounted:
-            self.vprint('calling guestfs.umount_local()')
+            self.dprint('calling guestfs.umount_local()')
 
             for i in range(0, 10):
                 try:
@@ -258,4 +304,4 @@ class ImageAccess():
                     if i == 9:
                         print 'guestfs.umount_local: giving up...'
         elif self.fuse:
-            self.vprint('skipping guestfs.umount_local() call -- nothing mounted')
+            self.dprint('skipping guestfs.umount_local() call -- nothing mounted')

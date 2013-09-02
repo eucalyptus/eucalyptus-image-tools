@@ -22,6 +22,9 @@ mods = []
 
 for mod_long in to_source:
     mod = os.path.basename(mod_long)
+    if mod.startswith('.#'):
+        # Silently skip Emacs auto-save files.
+        continue
     (f, fn, d) = imp.find_module(mod)
     mods.append((os.path.basename(mod_long), imp.load_module(mod, f, fn, d)))
 
@@ -36,7 +39,7 @@ for mod in mods:
     try:
         success = mod[1].validator(image_handle)
     except Exception as e:
-        image_handle.vprint("Exception validating '%s' (%s): %s" % (mod[0],
+        image_handle.qprint("Exception validating '%s' (%s): %s" % (mod[0],
                                                                    e.__doc__,
                                                                    e))
     if not success:
