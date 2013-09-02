@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='euca_image_validation',
-      version='0.2',
+      version='0.3',
       packages=['euca_image_validation',],
       scripts=['euca_image_validate.py',],
       url='https://github.com/eucalyptus/eucalyptus-image-tools',
