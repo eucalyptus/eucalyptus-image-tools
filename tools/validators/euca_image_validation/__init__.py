@@ -1,3 +1,4 @@
+import fnmatch
 import os
 import sys
 import getopt
@@ -99,46 +100,57 @@ class ImageAccess():
         run_process.daemon = True
         run_process.start()
 
-    def find_files(self, path_name, file_name, glob=False, omit_mountpoint=True):
-        """Finds filename 'file' under path 'path'.
+    def find_files(self, pathname, filename, glob=False, omit_mountpoint=True):
+        """Finds file 'filename' under path 'pathname'.
 
         Returns a list of matching paths, optionally globbing the filename
-        and omitting (trimming away) the any leading mount-point path.
+        and omitting (trimming away) the any leading mount-point path
+        ('omit_mountpoint').
 
-        If 'file' is None, all filenames are returned.
+        If 'filename' is None, all filenames are returned.
 
         This provides an abstraction layer so that validators do not need to
         worry about whether an image is mounted or is being accessed via the
         libguestfs API.
 
         """
-        
         found = []
 
-        if file_name is None and glob is True:
+        if filename is None and glob is True:
             # FIXME: Doesn't make sense--raise exception?
             return found
 
         if self.mounted:
             # Using filesystem.
-            file_list = os.walk('%s%s' % (self.mountpoint, path_name))
-            found_list = [x for x in file_list if file_name in x[2]]
-
-            for x in found_list:
-                for y in x[2]:
-                    full_path = '%s/%s' % (x[0], y)
-
-                    if omit_mountpoint and full_path.startswith(self.mountpoint):
-                        found.append(full_path[len(self.mountpoint):])
+            for root, dirs, files in os.walk('%s%s' % (self.mountpoint,
+                                                       pathname)):
+                if len(files):
+                    if glob:
+                        match_files = [x for x in files if fnmatch.fnmatch(x, filename)]
                     else:
-                        found.append(full_path)
+                        match_files = [x for x in files if filename == x]
+
+                    if len(match_files):
+                        for x in match_files:
+                            if omit_mountpoint and root.startswith(self.mountpoint):
+                                found.append('%s/%s' % (root[len(self.mountpoint):], x))
+                            else:
+                                found.append('%s/%s' % (root, x))
         else:
             # Using libguestfs API.
-            file_list = self.guest.find(path_name)
-            found = ['%s%s' % (path_name, x) for x in file_list if file_name in x]
+            files = self.guest.find(pathname)
+
+            if glob:
+                found = ['%s%s' % (pathname, x) for x in files if fnmatch.fnmatch(os.path.basename(x), filename) and self.guest.is_file('%s%s' % (pathname, x))]
+            else:
+                found = ['%s%s' % (pathname, x) for x in files if filename == x and self.guest.is_file('%s%s' % (pathname, x))]
 
         return found
 
+    def read_file(self, filename):
+        """Returns the contents of file 'filename'."""
+        pass
+        
     ### FIXME: Need a method to consolidate walking/looking for files
     ### in a directory hierarchy and returning them. This will eliminate
     ### the need for validation scripts to worry about whether filesystem
