@@ -109,8 +109,7 @@ class ImageAccess():
         run_process.daemon = True
         run_process.start()
 
-    # Perhaps change default value of omit_mountpoint to False?
-    def find_files(self, pathname, filename, glob=False, omit_mountpoint=True):
+    def find_files(self, pathname, filename, glob=False, omit_mountpoint=False):
         """Finds file 'filename' under path 'pathname'.
 
         Returns a list of matching paths, optionally globbing the filename
@@ -267,7 +266,7 @@ class ImageAccess():
                     _usage()
             else:
                 # FIXME: Need to short-circuit this test; takes too long to
-                # exit when this condition is met. Should be instant.
+                # exit when this condition is met. Should be much quicker.
                 self.dprint('\nNote: %s: Using an image without FUSE.\n' % sys.argv[0])
         else:
             if len(arglist):

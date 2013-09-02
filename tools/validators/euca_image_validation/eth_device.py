@@ -12,7 +12,7 @@ def _check_redhat(val):
     retval = False
     files_contents = {}
 
-    if_files = val.find_files(redhat_dirname, '%s*' % redhat_file_prefix, glob=True, omit_mountpoint=False)
+    if_files = val.find_files(redhat_dirname, '%s*' % redhat_file_prefix, glob=True)
 
     for if_file in if_files:
         try:
@@ -29,7 +29,7 @@ def _check_redhat(val):
             # and/or ONBOOT line(s).
             val.vprint('Checking interface: %s' % files_contents[if_file]['DEVICE'])
             if files_contents[if_file]['ONBOOT'].count('yes') or files_contents[if_file]['ONBOOT'].count('on'):
-                val.qprint('Found interface: %s' % files_contents[if_file]['DEVICE'])
+                val.qprint('Found active interface: %s' % files_contents[if_file]['DEVICE'])
                 retval = True
         except Exception as e:
             val.qprint("Cannot analyze file '%s': %s" % (if_file, e))
@@ -37,7 +37,7 @@ def _check_redhat(val):
     return retval
 
 def _check_ubuntu(val):
-    path_list = val.find_files(ubuntu_dirname, ubuntu_filename, omit_mountpoint=False)
+    path_list = val.find_files(ubuntu_dirname, ubuntu_filename)
 
     if len(path_list):
         full_path = path_list[0]
