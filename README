@@ -6,10 +6,18 @@ These steps are required for the Export VMDK tool:
  * yum install python-pip
  * python-pip install -U psphere
 
+DESCRIPTION
+
+Export VMDK files for an instance. The tool can export one named instance or all
+instances that available from endpoint and can be exported.
+Instance can be exported if it is in powered off state, has one disk device and
+one network device.
+
 USAGE
 
 Export VMDK tool:
-  python tools/exporters/export_vmdk.py --ip <vSphere IP> --user <vSphere user> --password <vSphere password> --vmName <VM to export or all>
+  python tools/exporters/export_vmdk.py --ip <vSphere IP> --user <vSphere user>
+   --password <vSphere password> --vmName <VM to export or 'all' for all>
   Use 'python tools/exporters/export_vmdk.py -h' for more details
 
 ------------------------------------------------------------------------
