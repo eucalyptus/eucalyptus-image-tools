@@ -25,6 +25,7 @@
 #     2 - invalid VM name
 #     3 - no access to extend 
 #     4 - not enough free disk space
+#     5 - nothing to export
 
 import re
 import urllib2
@@ -111,18 +112,22 @@ def parseVMDK(pathToFile):
        
 def exportVM(serverIp, user, passwd, vmName, workingDir):
     try:
+        print "Connecting to the server...."
         client = Client(serverIp, user, passwd)
     except WebFault:
         print "Can't connect to the server"
         sys.exit(1)
+    print "Connected"
     validVms = {}
     if vmName <> 'all':
         try:
             vm = VirtualMachine.get(client, name=vmName)
             if vm.runtime.powerState <> 'poweredOff':
                 print 'Skipping VM:' + vm.name + ' VM is not powered off'
+                sys.exit(5)
             if len(vm.network) <> 1:
                 print 'Skipping VM:' + vm.name + ' The number of network devices is not equal to 1'
+                sys.exit(5)
             vmdkPath = getVMDKUri(serverIp, vm)
             if vmdkPath != None:
                 validVms[vm.name] = vmdkPath
