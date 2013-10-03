@@ -1,0 +1,65 @@
+The validator framework can be found in the eucalyptus-image-tools repository, under tools/validators. It can be installed on Linux (CentOS) and OS X (tested on OS X 10.8) using 'python setup.py install'.
+
+libguestfs functionality can be made available on Linux by installing the prerequisite libguestfs packages. On CentOS, this can be done with:
+
+$ yum install python-libguestfs libguestfs-tools-c
+
+(libguestfs functionality is not yet available on OS X.)
+
+The main driver script is 'euca_image_validate.py', which setup.py should install under /usr/bin. It can be run in three different modes:
+
+1. To validate an already-mounted image via direct access to the filesystem (the least secure method).
+2. To validate an image using a FUSE mount through libguestfs.
+3. To validate an image using libguestfs API calls (the most secure method).
+
+Mode 1:
+
+$ euca_image_validate.py MOUNTPOINT
+
+where MOUNTPOINT is the location on the filesystem where the image is mounted.
+
+Mode 2:
+
+$ euca_image_validate.py -a IMAGE
+
+where IMAGE is the location of the image to be validated.
+
+Mode 3:
+
+$ euca_image_validate.py --fuse -a IMAGE MOUNTPOINT
+
+where IMAGE is the location of the image to be validated, and MOUNTPOINT is the location on the filesystem where that image should be mounted during the validation. (It will be unmounted after the validation has been performed, prior to the exit of euca_image_validate.py.)
+
+
+Currently, two validators are included in the eucalyptus-image-tools repository, under tools/validators/euca_image_validation:
+
+acpihp.py
+eth_device.py
+
+These two validators represent two different sorts of validators. acpiphp.py is perhaps the simplest validator possible: it searches an image for the presence of a named file/path. eth_device.py is more complex: it searches an image for the presence of one or more named files and then analyzes the content to ensure it meets certain criteria, and its search and analysis is distribution-dependent (Red Hat/CentOS and Ubuntu).
+
+acpiphp.py also serves as a simple example/template for a validator. The only requirement for a validator is that it define a method named 'validator' that accepts a single argument: a validator "handle," which is an instance of the ImageAccess class defined in tools/validators/euca_image_validation/__init__.py.
+
+New validators can be added by writing scripts with a validator() method and ending in .py under tools/validators/euca_image_validation (and then installing the package using setup.py) or by writing scripts directly under the appropriate python site-packages directory, e.g. /usr/lib/python2.6/site-packages/euca_image_validation on CentOS systems.
+
+
+In addition to various output and housekeeping functions, the ImageAccess class defines two important methods: find_files() and read_file(). These methods provide an abstraction layer between validators and the underlying method used to access an image (direct mounting, FUSE mounting, and libguestfs API calls).
+
+find_files() takes a directory path and a filename (which can contain glob characters), as well as 'glob', a boolean (default False) that tells the method whether to treat the filename string as a glob. It returns a list containing all matching paths.
+
+read_file() takes a full filename path and returns the contents of the file in a line-buffered list.
+
+More information can be found in the functions' docstrings.
+
+euca_image_validate.py accepts several command-line options related to output:
+
+	-q :		Quiet mode. Suppresses routine output. Only exceptional conditions should produce output.
+	-v :		Verbose mode. Self-explanatory.
+	-d :		Debug mode. Verbose on caffeine. (Implies -v.)
+	--trace : 	Generates trace information from underlying calls to libguestfs. Very noisy--use sparingly. (Implies -d.)
+
+A couple of known issues/limitations:
+
+- FUSE mounting of images can be unreliable. In particular, if a validator is interrupted or fails due to an exception, FUSE mounts may hang and an unmount will have to be forced using 'fusermount -u MOUNTPOINT'. I have also seen FUSE unmounts fail for no discernible reason.
+
+- The docstring for find_files() states, "If 'filename' is None, all filenames are returned." This has not yet been implemented.
